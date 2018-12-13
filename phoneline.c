@@ -6,17 +6,29 @@
 #include <string.h>
 #include <sys/shm.h>
 #include <errno.h>
+union semun {
+               int              val;    /* Value for SETVAL */
+               struct semid_ds *buf;    /* Buffer for IPC_STAT, IPC_SET */
+               unsigned short  *array;  /* Array for GETALL, SETALL */
+               struct seminfo  *__buf;  /* Buffer for IPC_INFO
+                                           (Linux-specific) */
+           };
 
 int main(){
     key_t mykey = ftok("tele.c",'R');
     int shmid = shmget(mykey,2048,0), semid = semget(mykey,1,0);
     struct sembuf sb;
-    sb.sem_num = 0,sb.sem_flg=0,sb.sem_op = -1;
-    semop(semid,&sb,1);    
+    sb.sem_num = 0,sb.sem_flg=0,sb.sem_op = -1; 
     if((shmid==-1)||(semid==-1)){
         printf("Shmget/Semget failure\n");
         return -1;
     }
+    printf("Checking the availability of the shared memory segment!\n");
+    if(!semctl(semid,0,GETVAL,1)){
+        printf("Segment unavailable, exiting\n");
+        return -1;
+    }
+    semop(semid,&sb,1); 
     char* data = shmat(shmid,NULL,0);
     int pos = strlen(data)-1;
     while(pos>0 && data[pos---1]!='\n') ;
