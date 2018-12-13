@@ -32,7 +32,7 @@ int main(int argc,char** argv){
         return -1;
     }
     key_t mykey = ftok("tele.c",'R');
-    int shmid,semid,fd;
+    int shmid,semid;
     if(mykey){
         switch(mode){
             case 'c':
@@ -51,9 +51,6 @@ int main(int argc,char** argv){
                     printf("Shmget/Semget failure\n");
                     return -1;
                 }
-                struct sembuf sb;
-                sb.sem_num = 0,sb.sem_flg=0,sb.sem_op = -1;
-                semop(semid,&sb,1);
                 shmctl(shmid, IPC_RMID, NULL);
                 semctl(semid, IPC_RMID, 0);
                 break;
@@ -63,7 +60,7 @@ int main(int argc,char** argv){
                     printf("Shmget failure\n");
                     return -1;
                 }
-                char* str = shmat(shmid,(void*)0,0); 
+                char* str = shmat(shmid,NULL,0); 
                 printf("This is the story thusfar:\n");
                 puts(str);
                 break;
