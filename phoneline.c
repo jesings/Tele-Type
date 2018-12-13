@@ -19,9 +19,13 @@ int main(){
     }
     char* data = shmat(shmid,NULL,0);
     int pos = strlen(data)-1;
-    while(pos>0 && data[pos-1]!='\n') ;
-    if(pos!=-1)
-        puts(*data[pos]);
+    while(pos>0 && data[pos---1]!='\n') ;
+    if(pos>0)
+        printf("Last line: %s\n",data+pos+1);
+    else if(pos==0)
+        printf("Last line: %s\n",data+pos);
+    else
+        printf("Start of file:\n");
     printf("Please insert the next line of the file: ");
     fflush(stdout);
     char buff[256];
