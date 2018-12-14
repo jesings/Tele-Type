@@ -1,50 +1,67 @@
 #include <stdio.h>
+#include <stdlib.h>
+
+#include <string.h>
+#include <errno.h>
+
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
-#include <sys/sem.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/shm.h>
-#include <errno.h>
-union semun {
-               int              val;    /* Value for SETVAL */
-               struct semid_ds *buf;    /* Buffer for IPC_STAT, IPC_SET */
-               unsigned short  *array;  /* Array for GETALL, SETALL */
-               struct seminfo  *__buf;  /* Buffer for IPC_INFO
-                                           (Linux-specific) */
-           };
+#include <sys/sem.h>
 
-int main(){
-    key_t mykey = ftok("tele.c",'R');
-    int shmid = shmget(mykey,2048,0), semid = semget(mykey,1,0);
-    struct sembuf sb;
-    sb.sem_num = 0,sb.sem_flg=0,sb.sem_op = -1; 
-    if((shmid==-1)||(semid==-1)){
-        printf("Shmget/Semget failure\n");
-        return -1;
-    }
-    printf("Checking the availability of the shared memory segment!\n");
-    if(!semctl(semid,0,GETVAL,1)){
-        printf("Segment unavailable, exiting\n");
-        return -1;
-    }
-    semop(semid,&sb,1); 
-    char* data = shmat(shmid,NULL,0);
-    int pos = strlen(data)-1;
-    while(pos>0 && data[pos---1]!='\n') ;
-    if(pos>0)
-        printf("Last line: %s\n",data+pos+1);
-    else if(pos==0)
-        printf("Last line: %s\n",data+pos);
-    else
-        printf("Start of file:\n");
-    printf("Please insert the next line of the file: ");
-    fflush(stdout);
-    char buff[256];
-    fgets(buff,256,stdin);
-    strcat(data,buff);
-    shmdt(data);
-    sb.sem_op = 1;
-    semop(semid,&sb,1);    
-    return 0;
+union semun {
+	int              val;    /* Value for SETVAL */
+	struct semid_ds *buf;    /* Buffer for IPC_STAT, IPC_SET */
+	unsigned short  *array;  /* Array for GETALL, SETALL */
+	struct seminfo  *__buf;  /* Buffer for IPC_INFO
+								(Linux-specific) */
+};
+
+int main() {
+	struct sembuf sb;
+
+	key_t mykey = ftok("tele.c", 'R');
+	int shmid = shmget(mykey, 2048, 0);
+	int semid = semget(mykey, 1, 0);
+
+	sb.sem_num = 0, sb.sem_flg = SEM_UNDO, sb.sem_op = -1;
+	if ((shmid == -1) || (semid == -1)) {
+		printf("Error: %s\n", strerror(errno));
+		return -1;
+	}
+	printf("Checking the availability of the shared memory segment!\n");
+	if (!semctl(semid, 0, GETVAL, 1)) {
+		printf("Segment unavailable, exiting\n");
+		return -1;
+	}
+
+	semop(semid, &sb, 1);
+	char *data = shmat(shmid, 0, 0);
+	if (*data == -1) printf("Error: %s\n", strerror(errno));
+	else if (!*data) printf("No story yet\n");
+	else {
+		int fd = open("story", O_RDONLY);
+		lseek(fd, *data * -1, SEEK_END);
+		char *buff = malloc(*data);
+		read(fd, buff, *data);
+		printf("Last line: \n%s\n", buff);
+		close(fd);
+		free(buff);
+	}
+
+	printf("Please insert the next line of the file:\n");
+	char input[2048];
+	fgets(input, sizeof(input), stdin);
+	int fd = open("story", O_WRONLY | O_APPEND);
+	*data = strlen(input);
+	write(fd, input, *data);
+	close(fd);
+	shmdt(data);
+	sb.sem_op = 1;
+	semop(semid, &sb, 1);
+	return 0;
 }
