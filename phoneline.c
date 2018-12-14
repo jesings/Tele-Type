@@ -42,10 +42,10 @@ int main() {
 	semop(semid, &sb, 1);
 	char *data = shmat(shmid, 0, 0);
 	if (*data == -1) printf("Error: %s\n", strerror(errno));
-	else if (!*data) printf("No story yet\n");
+	else if (!*data) printf("No story yet!\n");
 	else {
 		int fd = open("story", O_RDONLY);
-		lseek(fd, *data * -1, SEEK_END);
+		lseek(fd, -1 * *data, SEEK_END); //go back # of bytes in len of data
 		char *buff = malloc(*data);
 		read(fd, buff, *data);
 		printf("Last line: \n%s\n", buff);

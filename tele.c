@@ -21,14 +21,13 @@ union semun {
 								(Linux-specific) */
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 	if (argc < 2) {
 		printf("Give a command line argument dummy\n");
 		return -1;
 	}
 
 	char mode;
-	union semun s;
 	int shmid, semid, fd, size;
 	struct stat st;
 
@@ -61,16 +60,11 @@ int main(int argc, char** argv) {
 					return -1;
 				}
 
-				int msg = shmctl(shmid, IPC_RMID, NULL);
-				if (msg == -1) {
-					printf("Error: %s\n", strerror(errno));
-				}
-				msg = semctl(semid, IPC_RMID, 0);
-				if (msg == -1) {
-					printf("Error: %s\n", strerror(errno));
-				}
+				int e = shmctl(shmid, IPC_RMID, NULL);
+				if (e == -1) printf("Error: %s\n", strerror(errno));
+				e = semctl(semid, IPC_RMID, 0);
+				if (e == -1) printf("Error: %s\n", strerror(errno));
 
-				struct stat st;
 				stat("story", &st);
 				size = (int)st.st_size;
 
@@ -97,8 +91,7 @@ int main(int argc, char** argv) {
 				free(buff2);
 				break;
 		}
-	}
-	else {
+	} else {
 		printf("Idiotic key failure\n");
 		return -1;
 	}
